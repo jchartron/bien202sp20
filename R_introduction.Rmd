@@ -1,0 +1,353 @@
+---
+title: "Introduction to R"
+output:
+  html_notebook:
+    toc: true
+    toc_float: true
+---
+
+Keep these cheatsheets handy: https://rstudio.com/resources/cheatsheets/ 
+
+## Introductory stuff 
+The top of this file is a YAML header that controls how R markdown is rendered.
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+To run just a single line press *Ctrl+Enter*.
+
+```{r}
+plot(cars) #cars is a dataset R has by default. The plot command is a simple x-y scatter
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+## Basics
+
+Variables are assigned with `<-` or `=`.
+Let's explore some and a few functions for testing type
+
+```{r}
+numeric_float <- 1 # Defaults to float aka double
+numeric_integer <- 1L
+class(numeric_float) # the class function returns the class, a numeric vector
+class(numeric_integer) 
+typeof(numeric_float)
+typeof(numeric_integer)
+
+Dr.Morgan <- "Josh" # You might be wincing, but surely only because having a "." in a variable name seems unusual (remember methods in Python?). It actually isn't a problem in R, but try to avoid it. 
+
+
+is.character(Dr.Morgan) # returns a Boolean
+is.logical(Dr.Morgan) # I choose intuitive examples
+is.logical(is.character(Dr.Morgan))
+```
+
+## Vectors
+
+R doesn't have scalars. A single value is a vector with one entry.
+Vectors can be made with the `c()` function.
+Vectors must all be of the same type. If you put in a mixture of types, they will be *coerced* to the "highest" type
+
+```{r}
+class(1)
+class(TRUE)
+class("Answer")
+
+myvector <- c(1, TRUE, "Answer")
+sapply(myvector, class) # Shortcut sapply is similar to list comprehension in python!
+
+myvector[1] <- "No" # vectors are 1-indexed, and "mutable" (actually a copy is made)
+myvector
+```
+
+A list is a collection of objects, which can have different types. It is created with the `lists` constructor function. Notice how different lists appear when you call them!
+
+The last list in the example is given a name, "vector". R lists are somewhat of a merge between Python lists and python dictionaries!
+
+```{r}
+mylist <- list(1, TRUE, "Answer", vector=c(1,3,5))
+mylist
+mylist <- c(mylist, "Admiral Ackbar") #Two things: unlike python, we apply a function to the object. Second, we need to reassign
+mylist
+sapply(mylist, class)
+```
+
+## Matrices and data frames
+
+R has matrix support built in. Matrices are a 2 dimension array, where all values are of the same class.
+
+```{r}
+thematrix <- matrix(1:9, nrow = 3, ncol = 3) # the matrix constructor fills by columns
+thematrix
+```
+
+```{r}
+verylargearray <- array(1:8, dim = c(3, 3, 3))
+verylargearray
+```
+Notice how I didn't provide enough data to fill a single 3x3 matrix? The data are recycled.
+
+What if you a 2D equivalent of a list, where columns could represent different types? The base R provides support for this as a data.frame
+
+```{r}
+mydf <- data.frame(names = c("Sample A", "Sample B", "Sample C"), values = rnorm(3))
+mydf
+```
+
+
+## Indexing
+
+Besides the 1- vs 0- indexing, subsetting has slight differences from python:
+
+```{r}
+a <- seq(2,20, by = 2)
+a
+a[1]
+a[1:3] # using a range
+a[c(1, 4, 10)] # Using a vector to subset elements
+a[length(a)] # the last item
+```
+
+Indexing with lists can get weird. If you just use [], you'll get back a list containing that element. However, if you use [[]], you'll just obtain that element. This seems silly, but you'll see this in Bioconductor code.
+
+```{r}
+mylist[4]
+class(mylist[4]) # it's a list!
+
+mylist[[4]]
+class(mylist[[4]]) #it's a vector!
+
+class(mylist[5]) <- "trap" # this is advanced, but object classes in R S3 are loosey goosey
+paste(mylist[5], "says it's a", class(mylist[[5]])) #Paste is used like the python3 print function
+# Can you spot the coercion in the last line?
+```
+
+With named lists and data.frames, you can call entries and columns using their names, using `$` as a selector
+
+```{r}
+mydf # from a few cells above
+mydf$names
+mydf$names[1] #first entry of the names column
+mylist$vector # from a few cells above
+```
+
+
+## Control flow
+
+R has the set of if, else, and for loops you'd come to expect. Note the curly braces.
+
+```{r}
+subject <- list("Dr. Morgan", 42) # Creating an iterable object
+for (i in subject) { # Note the parenthesis? "for" is actually a function
+if (is.character(i)) { # conditional in the () must evaluate to true or false
+  print(paste(i, "is a character"))
+ } else {
+  print(paste(i, "is not a character"))
+ }
+}
+```
+
+## Functions and Functionals
+
+R has a reputation of being slow, particularly with for loops. This is because of how it handles memory management.
+
+R is a functional language and relies on functions called *functionals*. Functionals are functions that take functions as input and outputs a vector. Sounds fun!
+
+A less confusing way to thinking about it is they are commands which take a function and apply it over the elements of a list.
+
+`lapply` is the basic form, that takes a list as input and a transformed list as an output.
+
+Let's rewrite the example above by turning the loop into a function
+
+```{r}
+myfunction <- function(input) { # define a function with the function function.
+                                    # input is the name of the parameter
+                                    # this function is assigned to "myfunction"
+                    if (is.character(input)) {
+                      paste(input, "is a character")
+                    } else {
+                      paste(input, "is not a character")
+                      }
+                  }
+```
+
+Notice that we dropped the for loop. This function acts on a single input. `lapply` will map it to each element of the input list. Also notice that we dropped the print statement. Functions return the last thing sent to console. They don't require a 'return' card like in Python (but there is a return() function if you'd like).
+
+```{r}
+lapply(subject, myfunction) # lapply takes the form of list, function.
+```
+
+## Base R
+
+R is written by statisticians. Most mathematics, statistics, regression and graphing functions are already present in the base installation. 
+
+## Installing and loading packages
+
+If you are using a conda-managed environment, many of packages can be installed from the command line. Search for them at https://anaconda.org/conda-forge/ with an "r-" in front of their names, like "r-tidyverse".
+
+The `install.packages()` function can be called within an R session
+Input a package as a character, or a set of packages
+
+```{r}
+install.packages(c("ggplot2","dplyr"))
+```
+
+You can load packages with the `library()` function. Be aware this can cause namespace conflicts
+Unlike install packages, package names do not need to be in quotes.
+
+```{r}
+library(ggplot2)
+```
+
+To avoid namespace conflicts, you can call a function from a library without importing it.
+
+```{r}
+ggplot2::qplot(x = seq(1:10), y = rnorm(10))
+```
+
+## Packages to know
+
+The *tidyverse* is a collection of packages provided by Rstudio. They are set of tools used for data import, manipulation and visualization in a consistent and easy to read way. They operate on the principle of tidy data: each row in a 2-D array corresponds to a single data point. 
+
+For more information on tidy data see https://r4ds.had.co.nz/tidy-data.html and https://r4ds.had.co.nz/transform.html 
+
+and https://dplyr.tidyverse.org/
+
+
+![](https://res.cloudinary.com/syknapptic/image/upload/v1521304412/messy_tidy_qq4ba9.png)
+```{r}
+# install.packages("tidyverse")
+# or conda install r-tidyverse in the command line
+library(tidyverse)
+starwars # provided in the tidyverse library
+starwars %>% # the magrittr package provides the pipe operator. This feeds the output of one function into the first argument of the next.
+  filter(species == "Droid")
+```
+
+The filter takes all the rows that satisfy the conditional.
+
+The mutate command below can be used to create new columns based on transformations of existing functions.
+
+```{r}
+starwars %>% 
+  mutate(name, bmi = mass / ((height / 100)  ^ 2)) %>%
+  select(name:mass, bmi)
+```
+
+The group_by command takes data with a shared factor and keeps them together for downstream analysis:
+
+```{r}
+starwars %>%
+  group_by(species) %>% # takes all of the data grouped by species
+  summarise( # performs a function across all instances of the the group
+    n = n(), # count
+    mass = mean(mass, na.rm = TRUE) # average mass, removing missing values
+  ) %>%
+  filter(n > 1, # only look at the results with more than 1 entry, and more than 50 mass
+         mass > 50)
+```
+
+## Graphing
+
+R has fantastic visualizations provided by the base language (called base graphics).
+The tidyverse includes a package called ggplot2 which streamlines production of figures from tidy data using *grammar of graphics.*
+
+For a fantastic overview into ggplot2, read: https://ggplot2-book.org/
+It's a fast read. 
+
+The basic way to make a ggplot is to first create the plot with:
+
+`ggplot(dataframe)`
+
+and then add in a plot geometry (scatter, line, barchart, boxplot, violin, etc.) with a `geom` command.
+
+Columns from the data.frame are mapped to visual features of the plot with the aesthetic function `aes`. For example `aes(x=xaxisdata, y = yaxisdata, fill = somegrouping)`. aes can be defined in the ggplot function, or in the geom function (see examples below).
+
+We'll go through a few minimal examples here.
+In the example below, note that the `+` operator continues the command to the next line
+
+```{r}
+ggplot(starwars, aes(gender)) + # call the star wars data. Set an aesthetic to gender
+  geom_bar() # designate that a bar chart is used
+```
+
+Let's compare character height and mass
+
+```{r}
+ggplot(starwars) +
+  geom_point(aes(height, mass))
+```
+
+There seems to be a big outlier in mass. Let's find it;
+
+```{r}
+starwars %>%
+  arrange(-mass) # the negative sign sorts from most to least
+```
+
+Looks like Jabba is the outlier. Let's filter Jabba from the data and try again:
+
+```{r}
+starwars %>%
+  filter(!str_detect(name, "Jabba")) %>% # the ! means "not" and the str_detect searches for Jabba
+  ggplot() +
+    geom_point(aes(height, mass, color = gender)) # adding a third aesthetic mapping
+```
+
+## Bioconductor
+
+Bioconductor is a set of packages for bioinformatics that are unified by a common set of data structures. Before using bioconductor software, you need to install it into your R environment. You can do this within an R session with the code below. Or, if you are using conda, you can install a bioconductor package and let conda take care of the rest.
+
+For example `conda install bioconductor-deseq2`. This will install any other dependencies.
+
+```{r}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install() # you can use this command to update your packages
+BiocManager::install(c("DESeq2", "edgeR"))
+```
+
+We'll come back to some bioconductor packages when we talk about differential gene expression, but if you'd like to get started on the tutorials linked in the project instructions, you're all set now.
+
+## Using Python from within R
+
+Rmarkdown can actually run Python without any issue. With the reticulate package, you can even share variables between two sessions
+
+```{r}
+install.packages("reticulate")
+library(reticulate)
+conda_list() # same as conda env --list in the command line
+use_condaenv("lab")
+```
+
+```{python}
+import numpy as np
+a = np.array([[1,2,3],[4,5,6]])
+a
+```
+
+Here, I've created a numpy array in python. Let's call this same array in R
+
+```{r}
+py$a # The python environment is an object
+class(py$a) # the numpy array is translated into a matrix!
+py$a[1,3] <- 20 # Let's reassign in r
+
+myrvector <- c("This","is","awesome!") # let's give something back to python
+```
+
+We made a reassignment within R, how does it look in the python session?
+
+```{python}
+a
+# can we do the opposite? see variables from python?
+r.myrvector # shows up as a python list!
+```
+
+
