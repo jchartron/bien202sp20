@@ -6,7 +6,7 @@ output:
     toc_float: true
 ---
 
-Keep these cheatsheets handy: https://rstudio.com/resources/cheatsheets/ 
+Keep these cheatsheets handy: https://rstudio.com/resources/cheatsheets/ . 
 
 ## Introductory stuff 
 The top of this file is a YAML header that controls how R markdown is rendered.
