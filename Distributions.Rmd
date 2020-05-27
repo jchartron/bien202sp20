@@ -1,0 +1,75 @@
+---
+title: "Fun with distributions"
+author: "Justin Chartron"
+date: "5/26/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Simulating a poisson
+
+R has functions for most commonly used distributions in base.
+
+```{r}
+library(ggplot2) # needed for qplot
+poisson.values = rpois(200, 25)
+poisson.values
+qplot(poisson.values)
+```
+
+Let's inpt the log-likelihood function and create a test sequence
+
+```{r}
+ll = function(x, lambda) {-length(x)*lambda - sum(log(factorial(x))) + log(lambda)*sum(x) }
+testlambda <- seq(1, 50, 0.1)
+```
+
+We can now use a functional to calculated a log likelihood for every test value of lambda!
+
+```{r}
+testll <- sapply(testlambda, function(y) ll(poisson.values,y))
+plot(testlambda, testll)
+```
+We can see from these graphs that the likelihood function has a single maximum, so solving for the derivative of the log-likelihood function will provide a maximum.
+
+The MASS library provides many maximum likelihood estimators for common distributions
+```{r}
+library(MASS)
+fitdistr(poisson.values, "poisson")
+```
+
+For completeness, we'd expect the maximum likelihood estimator to match mean mean. Let's test.
+
+```{r}
+mean(poisson.values)
+```
+Pretty anticlimactic for the Poisson distribution, but this is how you can derive a maximum likelihood estimator for other distribution paramaters.
+
+Now we can simulate what we would expect to see in a sequencing experiment. Let's suppose we have 3 biological replicates (many RNA-seq experiments only have 2). Suppose the true poisson parameter is 42. Can we estimate this using only 3 values?
+
+```{r}
+trial = vector(mode = "list", length = 5000) # Create a list with 5000 elements
+trial <- lapply(trial, function (x) rpois(3,42)) # Fill each list element with 3 random draws
+means <- sapply(trial, mean) # Take the mean for each (our MLE)
+qplot(means, geom = "histogram") # Show
+```
+
+Play around with the number of observations and Poisson parameter.
+
+```{r}
+
+nb <- rnbinom(1000, size = 1, mu = 5) # In R, as size -> infinity, NB ~ Pois
+p <- rpois(1000, 5)
+qplot(nb)
+qplot(p)
+
+```
+
+
+```{r}
+fitdistr(poisson.values, "negative binomial")
+```
+
