@@ -1,0 +1,89 @@
+---
+title: Brief example of RNA-seq in edgeR
+output: html_document
+---
+
+If necessary, let's install the Bioconductor and the EdgeR package:
+
+```{r, eval = F}
+install.packages("BiocManager")
+BiocManager::install("edgeR")
+```
+```{r}
+library(edgeR)
+```
+
+We're going to follow an example from the EdgeR manual, which is found [here](https://www.bioconductor.org/packages/release/bioc/vignettes/edgeR/inst/doc/edgeRUsersGuide.pdf). This data from this example is found in section 4.2. We'll follow the tutorial to a point, and then we'll move to the "classic" edgeR pipeline of estimating common dispersion and genewise (a.k.a. tagwise) dispersion.
+
+In this experiment, the model plant *Arabidopsis* was incubated with either a pathogen or a mock treatment. Three datasets were collected for each condition. We have a few options for analysis:
+
+1. We only consider only treatment. There may be experimental noise between biological replicates, but we'll consider this as an unpaired sample. The standard EdgeR pipeline is appropriate.
+2. We consider two factors: treatment, and replicate number. Perhaps there are systematic differences between each replicate. We can tease these out if we link pathogen and mock treatments for each replicate and use a Generalize Linear Regression model. In this case, we assume that the difference between treatments will be conserved in each replicate, and the replicates will differ due to systematic variation. This is the case considered in the official tutorial.
+
+
+Let's first load the data, which is included in the bien202sp20 git repository as arab.rds
+
+```{r}
+arab <- readRDS("arab.rds")
+head(arab) 
+```
+
+We're going to do a bit of data munging to assign factors to this experiment
+
+```{r}
+Treat <- factor(substring(colnames(arab),1,4))
+Treat <- relevel(Treat, ref="mock")
+Time <- factor(substring(colnames(arab),5,5))
+```
+
+This takes the first four characters of the column name and assigns them to a treatment factor vector. It takes the fifth character of the names and assigns it to a time point.
+
+We then create an object for differential gene expression.
+
+```{r}
+y <- DGEList(counts=arab, group=Treat)
+```
+
+We see that this creates a list object, with an entry called samples which summaries data name, experimental group, library size, and normalization factor.
+
+Next, we need to do a TMM normalization.
+We'll remove any genes that aren't observed in every sample. 
+
+```{r}
+keep <- filterByExpr(y)
+table(keep)
+y <- y[keep, , keep.lib.sizes=FALSE]
+```
+
+TMM normalization
+
+```{r}
+y <- calcNormFactors(y)
+y
+```
+
+Now we can estimate dispersion factors. We'll do this in two steps: first, we'll calculate a common dispersion factor using qCML. Then, we'll use the emperical Bayes' method to shrink the gene-wise dispersions towards the common value. This is actually quite uneventful in R.
+
+```{r}
+y <- estimateCommonDisp(y)
+y <- estimateTagwiseDisp(y)
+plotBCV(y)
+```
+
+Notice how dispersion tends to decrease as total read counts increase?
+
+EdgeR has more sophisticated methods of estimating dispersion, but this is a basic, reasonable pipeline. Now we can test for differential gene expression.
+
+
+```{r}
+et <- exactTest(y)
+topTags(et)
+```
+
+Let's visualize the results in an MA (or MD) plot
+
+```{r}
+plotMD(et)
+```
+
+For comparison of this simple treatment to a multifactor design, check out the full tutorial in the EdgeR manual.
